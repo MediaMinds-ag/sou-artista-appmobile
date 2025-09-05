@@ -1,0 +1,77 @@
+workflows:
+  ios-simulator:
+    name: iOS Simulator (Capacitor)
+    max_build_duration: 60
+    environment:
+      xcode: 16.2
+      node: 20.19.5
+      cocoapods: default
+      vars:
+        SCHEME: App
+        WORKSPACE: ios/App/App.xcworkspace
+        DERIVED: build/ios-sim
+        # Se quiser, defina WEB_URL aqui e use capacitor.config.ts lendo process.env.WEB_URL
+        # WEB_URL: https://google.com.br
+    cache:
+      cache_paths:
+        - $HOME/Library/Caches/CocoaPods
+        - ios/App/Pods
+        - ~/.npm
+        - node_modules
+    scripts:
+      - name: Versions
+        script: |
+          node -v; npm -v; pod --version; xcodebuild -version
+      - name: Install deps
+        script: |
+          if [ -f package-lock.json ]; then npm ci; else npm i; fi
+      - name: Force (re)create iOS & sync Capacitor
+        script: |
+          set -euo pipefail
+          echo ">>> Source config (capacitor.config.json)"
+          cat capacitor.config.json | sed -n '1,160p'
+          rm -rf ios/App
+          npx cap add ios
+          npx cap sync ios
+          echo ">>> iOS-copied config:"
+          cat ios/App/App/capacitor.config.json | sed -n '1,160p'
+      - name: CocoaPods install
+        script: |
+          set -euo pipefail
+          cd ios/App
+          pod repo update
+          pod install --repo-update
+      - name: Build for iOS Simulator
+        script: |
+          set -euo pipefail
+          test -f "$WORKSPACE/contents.xcworkspacedata" || { echo "Workspace inválido: $WORKSPACE"; exit 1; }
+          xcodebuild \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath "$DERIVED" \
+            clean build
+      - name: Zip .app
+        script: |
+          set -euo pipefail
+          ROOT_DIR="$PWD"
+          OUTPUT_DIR="$ROOT_DIR/output"
+          mkdir -p "$OUTPUT_DIR"
+          APP_PATH="$(/usr/bin/find "$DERIVED/Build/Products" -maxdepth 3 -type d -name '*.app' -print -quit || true)"
+          [ -n "${APP_PATH:-}" ] || { echo "Nenhum .app encontrado em $DERIVED/Build/Products"; find "$DERIVED" -maxdepth 4 -type d -print; exit 2; }
+          echo "Zippando: $APP_PATH"
+          /usr/bin/ditto -ck --sequesterRsrc --keepParent "$APP_PATH" "$OUTPUT_DIR/SouArtista-iphonesimulator.zip" \
+            || /usr/bin/zip -ry "$OUTPUT_DIR/SouArtista-iphonesimulator.zip" "$APP_PATH"
+    artifacts:
+      - output/SouArtista-iphonesimulator.zip
+      - $DERIVED/Build/Products/**/App.app
+    publishing:
+      email:
+        recipients:
+          - you@example.com
+        notify:
+          success: true
+          failure: true
