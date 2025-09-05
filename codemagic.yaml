@@ -8,16 +8,8 @@ workflows:
       cocoapods: default
       vars:
         SCHEME: App
-        WORKSPACE: ios/App/App.xcworkspace
+        WORKSPACE: ios/App/App.xcworkspace   # <- atenção ao nome correto!
         DERIVED: build/ios-sim
-        # Se quiser, defina WEB_URL aqui e use capacitor.config.ts lendo process.env.WEB_URL
-        # WEB_URL: https://google.com.br
-    cache:
-      cache_paths:
-        - $HOME/Library/Caches/CocoaPods
-        - ios/App/Pods
-        - ~/.npm
-        - node_modules
     scripts:
       - name: Versions
         script: |
@@ -62,16 +54,8 @@ workflows:
           mkdir -p "$OUTPUT_DIR"
           APP_PATH="$(/usr/bin/find "$DERIVED/Build/Products" -maxdepth 3 -type d -name '*.app' -print -quit || true)"
           [ -n "${APP_PATH:-}" ] || { echo "Nenhum .app encontrado em $DERIVED/Build/Products"; find "$DERIVED" -maxdepth 4 -type d -print; exit 2; }
-          echo "Zippando: $APP_PATH"
           /usr/bin/ditto -ck --sequesterRsrc --keepParent "$APP_PATH" "$OUTPUT_DIR/SouArtista-iphonesimulator.zip" \
             || /usr/bin/zip -ry "$OUTPUT_DIR/SouArtista-iphonesimulator.zip" "$APP_PATH"
     artifacts:
       - output/SouArtista-iphonesimulator.zip
       - $DERIVED/Build/Products/**/App.app
-    publishing:
-      email:
-        recipients:
-          - you@example.com
-        notify:
-          success: true
-          failure: true
