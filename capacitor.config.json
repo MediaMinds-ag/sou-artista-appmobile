@@ -4,10 +4,11 @@
   "bundledWebRuntime": false,
   "webDir": "www",
   "server": {
-    "url": "https://google.com.br",
+    "url": "https://studio--sou-artista.us-central1.hosted.app",
     "cleartext": false,
     "allowNavigation": [
-      "google.com.br",
+      "studio--sou-artista.us-central1.hosted.app",
+      "*.hosted.app",
       "checkout.monetizze.com.br",
       "fonts.googleapis.com",
       "fonts.gstatic.com",
